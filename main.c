@@ -2,9 +2,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define NULL_TERM 0
-#define ALPHA(N) ( (n+1) )
+/*alphabet is 1-26*/
 #define OPER_IS 27
 #define OPER_IS_NOT 28
 #define OPER_AND 29
@@ -24,10 +25,20 @@
 #define LEXER_MODE_PARAM_B 4
 #define LEXER_MODE_FINISH 5
 
+
+#define LEXER_ASSIGN_TYPE_FUNC 0
+#define LEXER_ASSIGN_TYPE_BOOL_CHAR 1
+#define LEXER_ASSIGN_TYPE_BOOL_UINT 2
+#define LEXER_ASSIGN_RETURN_BUFFER 3
 #define DEBUG 1
 
-bool char_is_in_low_alphabet(char in){
-    return 'a' <= in && in >= 'z';
+bool char_is_in_low_alphabet(unsigned char in){
+    return 'a' <= in && in <= 'z';
+}
+
+
+unsigned int type_of_assignment(){
+    return 0;
 }
 
 int main(int argc, char * argv[]){
@@ -50,6 +61,7 @@ int main(int argc, char * argv[]){
     int res = 0;
     unsigned char res_as_char = 0;
     uint8_t lexer_mode = 0;
+    char err_message [256] = {0};
     
     if (argc < 2){
         printf("ERR: must specify file");
@@ -74,7 +86,10 @@ int main(int argc, char * argv[]){
 
     for (total_token_count = 0; 
         total_token_count-1 < LEXER_CONF_MAX_SIZE;
-        total_token_count++){
+        total_token_count++)
+    {
+        /*get the result, and if it's the EOF let's stop.
+         if it's whitespace or a newline, let's also ignore it*/
         res = fgetc(fptr_read);
         if (res == EOF) break;
         res_as_char = (unsigned char) res;
@@ -82,20 +97,90 @@ int main(int argc, char * argv[]){
         
         switch (lexer_mode){
             case LEXER_MODE_START:
-                if (DEBUG == 1) printf("LEXER_MODE_START -> found potential token \n");
+                if (DEBUG == 1) printf("LEXER_MODE_START -> found potential token %d %c \n", res_as_char, res_as_char);
+                /*if the letter is within the low alphabet, it's a valid boolean*/
+                
                 if (char_is_in_low_alphabet(res_as_char)){
-                    tiny_lexer[tiny_lexer_i] = res_as_char;
-                    printf("Lexer will assign value to namespace %c",res_as_char );
+                    tiny_lexer[tiny_lexer_i] = (res_as_char - 97);
+                    if (DEBUG == 1) printf("Lexer will assign value to namespace %c\n",res_as_char );
                     tiny_lexer_i++;
                     lexer_mode = LEXER_MODE_ASSIGN;
                 }
+                
+                /* if something when wrong, then let's go to the error resolution */
                 else {
+                    strcpy("Invalid character namespace for assignment. Must be one lowercase a-z with spacing atfer", err_message);
+                    goto err;
+                }
+                
+                if (' ' != ( (unsigned char ) fgetc(fptr_read)) ){
+                    strcpy("You must put at least one space character between the statement and the next token", err_message);
                     goto err;
                 }
                 break;
+            
             case LEXER_MODE_ASSIGN:
-                if (DEBUG == 1) printf("LEXER_MODE_ASSIGN");
+                if (DEBUG == 1) printf("LEXER_MODE_ASSIGN -> found potential token %d %c \n", res_as_char, res_as_char);
+                
+                if(res_as_char == 'i'){
+                    /*we must have an 'is' statement
+                     let's discard the characters 's' and
+                     then we have to see whether the next character is n.
+                     if it is then we will insert the "isnt" token,
+                     otherwise we will insert the "is" */
+                    printf("\nDEBUG: char is the start");
+                    fgetc(fptr_read);
+                    res_as_char = (unsigned char ) fgetc(fptr_read);
+                    printf("res as char is %c", res_as_char);
+                    if ('n' == res_as_char){
+                        tiny_lexer[tiny_lexer_i] = OPER_IS_NOT;
+                        tiny_lexer_i++;
+                        /* here we can discard the t and check to make
+                         sure there's a space before we proceed
+                         to the next lexer phase*/
+                        fgetc(fptr_read);
+                        if (fgetc(fptr_read) != ' '){
+                            strcpy("You must put at least one space character bwetween the statement and the next token", err_message);
+                            goto err;
+                        }
+                    }
+                    
+                    /* else, if this is a space, then we have the correct 'is ' statement, and we
+                     MUST continue after*/
+                    else if (' ' == res_as_char){
+                        printf("got a space", res_as_char);
+                        tiny_lexer[tiny_lexer_i] = OPER_IS;
+                        tiny_lexer_i++;
+                    } else{
+                        strcpy("Unrecognized declaration: use is or isnt when assigning", err_message);
+                        goto err;
+                    }
+                }
+                printf("Done!\n");
+                if (tiny_lexer[tiny_lexer_i-1] == OPER_IS) printf("Assignment operator == 'is'");
+                if (tiny_lexer[tiny_lexer_i-1] == OPER_IS_NOT) printf("Assignment operator == 'is not'");
+                
+                
+                lexer_mode = LEXER_MODE_FUNC;
+
                 break;
+            case LEXER_MODE_FUNC:
+                if (DEBUG == 1) printf("LEXER_MODE_FUNC -> found potential token %d %c \n", res_as_char, res_as_char);
+                /*this one is a little different. there's a lot of functions, so we're gonna
+                 use a char buffer to see what value it could be
+                 the func could be:
+                    and(a,b) -> does an AND on a,b
+                    or(a,b) -> does an OR on a, b
+                    nand (a,b) -> does an NAND on a, b
+                    nor (a,b) -> does an NOR on a,b
+                    xor (a,b) -> does an XOR on a, b
+                    xnor (a,b) -> does an XNOR on a,b
+                    resultpart -> assigns the next bit n to the resultpart that returns (from a 16-bit result)
+                    (a-z) -> assigns a-z as the result of the function
+                 */
+                
+                
+
         }
     }
     
@@ -103,8 +188,8 @@ int main(int argc, char * argv[]){
     return 0;
 
     err:
-        printf("ERR: could not compile program");
-        printf("trace --> token %d", total_token_count);
-        printf(" result");
+        printf("ERR: could not compile program\n");
+        printf("trace --> token %d\n\n", total_token_count);
+        printf("%s", err_message);
         
 }
