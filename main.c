@@ -80,6 +80,8 @@ void display_lexer_out(uint8_t * tl){
           case 35:
               printf("RETURN_RES");
               break;
+          case 36:
+              printf("END_SM");
            default:
              if (*tl_cp+96 >= 'a' && *tl_cp+96 <= 'z'){
                  printf("NAMESPACE_LETTER_%c", *tl_cp+64);
@@ -244,32 +246,32 @@ int main(int argc, char * argv[]){
                 printf("\n%s\n", func_buffer);
                 i = tiny_lexer_i;
                 if (strcmp("resultpar", func_buffer) == 0){
-                    tiny_lexer_i++;
                     tiny_lexer[tiny_lexer_i] = RETURN_RES;
+                    tiny_lexer_i++;
                 }
                 if (strcmp("and", func_buffer) == 0){
-                    tiny_lexer_i++;
                     tiny_lexer[tiny_lexer_i] = OPER_AND;
+                    tiny_lexer_i++;
                 }
                 if (strcmp("or", func_buffer) == 0){
-                    tiny_lexer_i++;
                     tiny_lexer[tiny_lexer_i] = OPER_OR;
+                    tiny_lexer_i++;
                 }
                 if (strcmp("nor", func_buffer) == 0){
-                    tiny_lexer_i++;
                     tiny_lexer[tiny_lexer_i] = OPER_NOR;
+                    tiny_lexer_i++;
                 }
                 if (strcmp("nand", func_buffer) == 0){
-                    tiny_lexer_i++;
                     tiny_lexer[tiny_lexer_i] = OPER_NAND;
+                    tiny_lexer_i++;
                 }
                 if (strcmp("xor", func_buffer) == 0){
-                    tiny_lexer_i++;
                     tiny_lexer[tiny_lexer_i] = OPER_XOR;
+                    tiny_lexer_i++;
                 }
                 if (strcmp("xnor", func_buffer) == 0){
-                    tiny_lexer_i++;
                     tiny_lexer[tiny_lexer_i] = OPER_XNOR;
+                    tiny_lexer_i++;
                 }
                 /*we set i=tiny_lexer_i
                  * since the tiny_lexer_i is set, that means that
@@ -294,8 +296,8 @@ int main(int argc, char * argv[]){
                     /*we found a namespace, let's delete the next char,
                      * bump in that, and let's go in
                      */
-                    tiny_lexer_i++;
                     tiny_lexer[tiny_lexer_i] = res_as_char-96;
+                    tiny_lexer_i++;
                     fgetc(fptr_read);
                     /*here we discard ',' */
                 }
@@ -315,8 +317,8 @@ int main(int argc, char * argv[]){
                     /*we found a namespace, let's delete the next char,
                      * bump in that, and let's go in
                      */
-                    tiny_lexer_i++;
                     tiny_lexer[tiny_lexer_i] = res_as_char-96;
+                    tiny_lexer_i++;
                     fgetc(fptr_read);
                     /* here we discard ')' */
                 }
@@ -329,19 +331,21 @@ int main(int argc, char * argv[]){
         case LEXER_MODE_FINISH:
             if (res_as_char == ';'){
                 /*we have successfully finished a statement */
-                tiny_lexer_i++;
                 tiny_lexer[tiny_lexer_i] = END_SM;
+                tiny_lexer_i++;
                 line_number++;
                 lexer_mode = LEXER_MODE_START;
             }
             else{
-                strcpy("ERR: you must end a statement with a ;\n", err_message);
+                printf("ERR: you must end all statements with a ';\n' ");
                 goto err;
             }
         }
     }
 
-
+    printf("LEXER DONE");
+    display_lexer_out(tiny_lexer);
+    printf("%d", tiny_lexer[3]);
     return 0;
 
     err:
