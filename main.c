@@ -16,6 +16,7 @@
 #define OPER_XOR 33
 #define OPER_XNOR 34
 #define RETURN_RES 35
+#define END_SM 36
 
 
 #define LEXER_CONF_MAX_SIZE 1024
@@ -49,6 +50,7 @@ unsigned int type_of_assignment(){
 
 void display_lexer_out(uint8_t * tl){
    uint8_t * tl_cp = tl;
+   uint8_t padding = 0;
    for(; *tl_cp !=0; tl_cp++){
        switch (*tl_cp){
           case 27:
@@ -83,6 +85,9 @@ void display_lexer_out(uint8_t * tl){
                  printf("NAMESPACE_LETTER_%c", *tl_cp+64);
              }
        }
+       printf(" -> ");
+       padding++;
+       if (padding % 3 == 0) printf("\n");
    }
 }
 
@@ -109,6 +114,7 @@ int main(int argc, char * argv[]){
     char err_message [256] = {0};
     char func_buffer [10] = {0};
     int i = 0;
+    uint16_t line_number = 1;
 
     if (argc < 2){
         printf("ERR: must specify file");
@@ -229,10 +235,14 @@ int main(int argc, char * argv[]){
                 for (i = 1; i < 9; i++){
                     res_as_char = (unsigned char) fgetc(fptr_read);
                     if (res_as_char == '(' || res_as_char == ';'){
+                       func_buffer[i] = '\0';
                        break;
                     }
                     func_buffer[i] = res_as_char;
                 }
+
+                printf("\n%s\n", func_buffer);
+                i = tiny_lexer_i;
                 if (strcmp("resultpar", func_buffer) == 0){
                     tiny_lexer_i++;
                     tiny_lexer[tiny_lexer_i] = RETURN_RES;
@@ -261,9 +271,73 @@ int main(int argc, char * argv[]){
                     tiny_lexer_i++;
                     tiny_lexer[tiny_lexer_i] = OPER_XNOR;
                 }
+                /*we set i=tiny_lexer_i
+                 * since the tiny_lexer_i is set, that means that
+                 * it should be incremented. if they're the same, the namespace wasn't found
+                 */
+                if (i==tiny_lexer_i){
+                    printf("ERR: symbol %s cannot be found. please put a valid functor name\n", func_buffer);
+                    goto err;
+                }
+                lexer_mode = LEXER_MODE_PARAM_A;
+                if (DEBUG==1) printf("\nDEBUG: assigned value %s with trueID (verify!!!) %d\n", func_buffer, tiny_lexer[tiny_lexer_i]);
+                break;
+            case LEXER_MODE_PARAM_A:
+                if (DEBUG == 1) printf("LEXER_MODE_PARAM_A -> found potential token %d %c \n", res_as_char, res_as_char);
 
-                if (DEBUG==1) printf("\nDEBUG: assigned and");
+                /*here we're veryifying a namespace to compare to. essentially, discard the
+                 * parantheses and get the next char, and verify it's alphabetical. if it's not,
+                 * then we return an error. if it is, then we can go to the next phase. i wish
+                 * C supported multiple switch values because the B value will be the exact same
+                 */
+                if (char_is_in_low_alphabet(res_as_char)){
+                    /*we found a namespace, let's delete the next char,
+                     * bump in that, and let's go in
+                     */
+                    tiny_lexer_i++;
+                    tiny_lexer[tiny_lexer_i] = res_as_char-96;
+                    fgetc(fptr_read);
+                    /*here we discard ',' */
+                }
+                else{
+                    strcpy("ERR: unrecognized non-alphabetical namespace for function", err_message);
+                    goto err;
+                }
+                lexer_mode = LEXER_MODE_PARAM_B;
+                break;
+        case LEXER_MODE_PARAM_B:
+                if (DEBUG == 1) printf("LEXER_MODE_PARAM_B -> found potential token %d %c \n", res_as_char, res_as_char);
 
+                /*here we're veryifying a namespace to compare to. essentially, look at the char and discard the parentheses
+                 */
+
+                if (char_is_in_low_alphabet(res_as_char)){
+                    /*we found a namespace, let's delete the next char,
+                     * bump in that, and let's go in
+                     */
+                    tiny_lexer_i++;
+                    tiny_lexer[tiny_lexer_i] = res_as_char-96;
+                    fgetc(fptr_read);
+                    /* here we discard ')' */
+                }
+                else{
+                    strcpy("ERR: unrecognized non-alphabetical namespace for function", err_message);
+                    goto err;
+                }
+                lexer_mode = LEXER_MODE_FINISH;
+                break;
+        case LEXER_MODE_FINISH:
+            if (res_as_char == ';'){
+                /*we have successfully finished a statement */
+                tiny_lexer_i++;
+                tiny_lexer[tiny_lexer_i] = END_SM;
+                line_number++;
+                lexer_mode = LEXER_MODE_START;
+            }
+            else{
+                strcpy("ERR: you must end a statement with a ;\n", err_message);
+                goto err;
+            }
         }
     }
 
@@ -272,7 +346,10 @@ int main(int argc, char * argv[]){
 
     err:
         printf("ERR: could not compile program\n");
-        printf("trace --> token %d\n\n", total_token_count);
-        printf("%s", err_message);
+        printf("trace --> LINE NUMBER: %d TOKEN %d\n\n", line_number, total_token_count);
+        printf("%s\n", err_message);
+        printf("LEXER VALUES:\n ");
+        display_lexer_out(tiny_lexer);
+        return -1;
 
 }
