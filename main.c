@@ -1,9 +1,8 @@
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <stdbool.h>
 #include <string.h>
+#include <errno.h>
 
 #define NULL_TERM 0
 /*alphabet is 1-26*/
@@ -106,6 +105,7 @@ int main(int argc, char * argv[]){
     */
 
     FILE * fptr_read;
+    FILE * fptr_write;
     char * out_file;
     uint8_t tiny_lexer[LEXER_CONF_MAX_SIZE] = {0};
     uint16_t tiny_lexer_i = 0;
@@ -343,10 +343,28 @@ int main(int argc, char * argv[]){
         }
     }
 
-    printf("LEXER DONE");
-    display_lexer_out(tiny_lexer);
-    printf("%d", tiny_lexer[3]);
+    fclose(fptr_read);
+    /* okay, now that we have our linker, let's generate our assembly
+        * first, let's ask possix nicely if we can write a file
+        */
+    fptr_write = fopen("out.asm", "w");
+    if (fptr_write == NULL){
+        printf("ERR: cannot write output! do you have access here?");
+    }
+    if (access("out.asm", W_OK)){
+        printf("ERR: cannot write output! OS doesn't permit access");
+        return 1;
+    }
+    /*now that we have a valid fptr, let's write to it
+     * first, the heading in x86 matters a lot
+     */
+    fwrite(".global start\n", sizeof(unsigned char) * 14, 1, fptr_write);
+    fwrite("start:\n", sizeof(unsigned char) * 7, 1, fptr_write);
+
+
     return 0;
+
+
 
     err:
         printf("ERR: could not compile program\n");
