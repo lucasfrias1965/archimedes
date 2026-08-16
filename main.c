@@ -290,6 +290,7 @@ int main(int argc, char * argv[]){
                      if (res_as_char != ';'){printf("ERR: you must end all statements with a ';' \n");goto err;}
                      tiny_lexer[tiny_lexer_i] = END_SM; tiny_lexer_i++;
                      lexer_mode = LEXER_MODE_START;
+                     continue;
 
                 }
                 if (strcmp("false", func_buffer) == 0){
@@ -298,6 +299,7 @@ int main(int argc, char * argv[]){
                     if (res_as_char != ';'){printf("ERR: you must end all statements with a ';' \n");goto err;}
                     tiny_lexer[tiny_lexer_i] = END_SM; tiny_lexer_i++;
                     lexer_mode = LEXER_MODE_START;
+                    continue;
                 }
                 /* if none of these occured, then let's double check it's not a one char
                  * letter namespace
@@ -309,7 +311,9 @@ int main(int argc, char * argv[]){
                        /*skip the function declaration, continue */
                        if (res_as_char != ';'){printf("ERR: you must end all statements with a ';' \n");goto err;}
                        tiny_lexer[tiny_lexer_i] = END_SM; tiny_lexer_i++;
-                       lexer_mode = LEXER_MODE_START;                    }
+                       lexer_mode = LEXER_MODE_START;
+                       continue;
+                    }
                 }
                 /*we set i=tiny_lexer_i
                  * since the tiny_lexer_i is set, that means that
