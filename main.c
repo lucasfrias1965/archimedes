@@ -16,6 +16,8 @@
 #define OPER_XNOR 34
 #define RETURN_RES 35
 #define END_SM 36
+#define TOKEN_TRUE 37
+#define TOKEN_FALSE
 
 
 #define LEXER_CONF_MAX_SIZE 1024
@@ -231,8 +233,8 @@ int main(int argc, char * argv[]){
                     xnor (a,b) -> does an XNOR on a,b
                     resultpart -> assigns the next bit n to the resultpart that returns (from a 16-bit result)
                     (a-z) -> assigns a-z as the result of the function
+                    true, false -> assigns the value to the literal;
                  */
-                //todo copy 0s into funcbuffer
                 func_buffer[0] = res_as_char;
                 for (i = 1; i < 9; i++){
                     res_as_char = (unsigned char) fgetc(fptr_read);
@@ -245,6 +247,7 @@ int main(int argc, char * argv[]){
 
                 printf("\n%s\n", func_buffer);
                 i = tiny_lexer_i;
+                /*no switch cause of strcmp :( */
                 if (strcmp("resultpar", func_buffer) == 0){
                     tiny_lexer[tiny_lexer_i] = RETURN_RES;
                     tiny_lexer_i++;
@@ -272,6 +275,41 @@ int main(int argc, char * argv[]){
                 if (strcmp("xnor", func_buffer) == 0){
                     tiny_lexer[tiny_lexer_i] = OPER_XNOR;
                     tiny_lexer_i++;
+                }
+                if (strcmp("true", func_buffer) == 0){
+                    tiny_lexer[tiny_lexer_i] = OPER_XNOR;
+                    tiny_lexer_i++;
+                    /*dirty solution time! so essentially, we stop
+                     * reading the buffer at the character ';', but
+                     * we consume it so next read it's not a valid end
+                     * character. to vanquish this problem, we will
+                     * now manually check this even tho we're in a
+                     * different phase, and then proceed to
+                     * the next. dirty, and squeamish, but functions
+                     */
+                     if (res_as_char != ';'){printf("ERR: you must end all statements with a ';' \n");goto err;}
+                     tiny_lexer[tiny_lexer_i] = END_SM; tiny_lexer_i++;
+                     lexer_mode = LEXER_MODE_START;
+
+                }
+                if (strcmp("false", func_buffer) == 0){
+                    tiny_lexer[tiny_lexer_i] = OPER_XNOR;
+                    tiny_lexer_i++;
+                    if (res_as_char != ';'){printf("ERR: you must end all statements with a ';' \n");goto err;}
+                    tiny_lexer[tiny_lexer_i] = END_SM; tiny_lexer_i++;
+                    lexer_mode = LEXER_MODE_START;
+                }
+                /* if none of these occured, then let's double check it's not a one char
+                 * letter namespace
+                 */
+                if (i == tiny_lexer_i){
+                    if (func_buffer[0] != 0 && func_buffer[1] == 0 && char_is_in_low_alphabet((unsigned char) func_buffer[0])){
+                       tiny_lexer[tiny_lexer_i]  = func_buffer[0]-96;
+                       tiny_lexer_i++;
+                       /*skip the function declaration, continue */
+                       if (res_as_char != ';'){printf("ERR: you must end all statements with a ';' \n");goto err;}
+                       tiny_lexer[tiny_lexer_i] = END_SM; tiny_lexer_i++;
+                       lexer_mode = LEXER_MODE_START;                    }
                 }
                 /*we set i=tiny_lexer_i
                  * since the tiny_lexer_i is set, that means that
@@ -337,13 +375,14 @@ int main(int argc, char * argv[]){
                 lexer_mode = LEXER_MODE_START;
             }
             else{
-                printf("ERR: you must end all statements with a ';\n' ");
+                printf("ERR: you must end all statements with a ';' \n");
                 goto err;
             }
         }
     }
 
     fclose(fptr_read);
+    if (DEBUG) display_lexer_out(tiny_lexer);
     /* okay, now that we have our linker, let's generate our assembly
         * first, let's ask possix nicely if we can write a file
         */
@@ -360,6 +399,7 @@ int main(int argc, char * argv[]){
      */
     fwrite(".global start\n", sizeof(unsigned char) * 14, 1, fptr_write);
     fwrite("start:\n", sizeof(unsigned char) * 7, 1, fptr_write);
+    /*the first part is to init this memory. memory  */
 
 
     return 0;
