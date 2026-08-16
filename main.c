@@ -118,6 +118,7 @@ int main(int argc, char * argv[]){
     char err_message [256] = {0};
     char func_buffer [10] = {0};
     int i = 0;
+    int j = 0;
     uint16_t line_number = 1;
 
     if (argc < 2){
@@ -166,12 +167,12 @@ int main(int argc, char * argv[]){
 
                 /* if something when wrong, then let's go to the error resolution */
                 else {
-                    strcpy("Invalid character namespace for assignment. Must be one lowercase a-z with spacing atfer", err_message);
+                    strcpy(err_message, "Invalid character namespace for assignment. Must be one lowercase a-z with spacing atfer");
                     goto err;
                 }
 
                 if (' ' != ( (unsigned char ) fgetc(fptr_read)) ){
-                    strcpy("You must put at least one space character between the statement and the next token", err_message);
+                    strcpy(err_message, "You must put at least one space character between the statement and the next token");
                     goto err;
                 }
                 break;
@@ -197,7 +198,7 @@ int main(int argc, char * argv[]){
                          to the next lexer phase*/
                         fgetc(fptr_read);
                         if (fgetc(fptr_read) != ' '){
-                            strcpy("You must put at least one space character bwetween the statement and the next token", err_message);
+                            strcpy(err_message, "You must put at least one space character bwetween the statement and the next token");
                             goto err;
                         }
                     }
@@ -208,7 +209,7 @@ int main(int argc, char * argv[]){
                         tiny_lexer[tiny_lexer_i] = OPER_IS;
                         tiny_lexer_i++;
                     } else{
-                        strcpy("Unrecognized declaration: use is or isnt when assigning", err_message);
+                        strcpy(err_message, "Unrecognized declaration: use is or isnt when assigning");
                         goto err;
                     }
                 }
@@ -287,7 +288,7 @@ int main(int argc, char * argv[]){
                      * different phase, and then proceed to
                      * the next. dirty, and squeamish, but functions
                      */
-                     if (res_as_char != ';'){printf("ERR: you must end all statements with a ';' \n");goto err;}
+                     if (res_as_char != ';'){strcpy(err_message, "ERR: you must end all statements with a ';'"); goto err;}
                      tiny_lexer[tiny_lexer_i] = END_SM; tiny_lexer_i++;
                      lexer_mode = LEXER_MODE_START;
                      continue;
@@ -344,7 +345,7 @@ int main(int argc, char * argv[]){
                     /*here we discard ',' */
                 }
                 else{
-                    strcpy("ERR: unrecognized non-alphabetical namespace for function", err_message);
+                    strcpy(err_message, "ERR: unrecognized non-alphabetical namespace for function");
                     goto err;
                 }
                 lexer_mode = LEXER_MODE_PARAM_B;
@@ -408,20 +409,24 @@ int main(int argc, char * argv[]){
      * interpert this lexercode is doing a literal assignment. so
      * we'll literally just assign the exact asm.
      */
-    for (i = 0; i<total_token_count && tiny_lexer[i] != 0;){
-        for (;i<total_token_count && tiny_lexer[i] != END_SM;i++){
-            func_buffer[i] = tiny_lexer[i];
+    for (tiny_lexer_i = 0; tiny_lexer_i<total_token_count && tiny_lexer[tiny_lexer_i] != 0;){
+        /* this function iterates through the portion of the "line" or statement
+         * given by the user with the i variable, which reset every new line. we
+         * except that the func_buffer will have a maximum of 10, and that's over-generous. it's just being reused
+         * from the previous function
+         */
+        printf("%d\n", tiny_lexer_i);
+        for (i=0; tiny_lexer_i<total_token_count && tiny_lexer[tiny_lexer_i] != END_SM;i++){
+            func_buffer[i] = tiny_lexer[tiny_lexer_i];
+            tiny_lexer_i++;
         }
+
+
         /* argument should not be more than 5 before end char
         / within lexer, so this ought not to go out of bounds
         check here is for redunancy */
 
         if (i+1 > 9){strcpy(err_message, "ERR: attempted to go past function buffer limit");goto err;}
-        /*TODO: this err keeps hitting because i can't be reset, consider a less ambigious name
-         * for the iterator between the tiny lexer and the i that's used to assign in the func buffer
-         * one should be reset within the inner loop, other should follow the full size of tiny_lexer
-         * in the outside loop
-         */
         func_buffer[i+1] = 0;
         i++;
         printf("func buffer loaded");
@@ -453,7 +458,7 @@ int main(int argc, char * argv[]){
      88.     88 `88. 88 `88. `8b  d8' 88 `88.
      Y88888P 88   YD 88   YD  `Y88P'  88   YD
      */
-        printf("\n---------------------------------------");
+        printf("\n----------------------------------------------------------");
         printf("\n d88888b d8888b. d8888b.  .d88b.  d8888b. \n");
         printf("88'     88  `8D 88  `8D .8P  Y8. 88  `8D \n");
         printf("88ooooo 88oobY' 88oobY' 88    88 88oobY'\n");
@@ -461,8 +466,8 @@ int main(int argc, char * argv[]){
         printf("88.     88 `88. 88 `88. `8b  d8' 88 `88.\n");
         printf("88.     88 `88. 88 `88. `8b  d8' 88 `88.\n");
         printf("Y88888P 88   YD 88   YD  `Y88P'  88   YD");
-        printf("\n----------------------------------------\ntrace --> LINE NUMBER: %d TOKEN %d\n\n", line_number, total_token_count);
-        printf("Error: %s\n", err_message);
+        printf("\n-----------------------------------------------------------\n|trace --> LINE NUMBER: %d TOKEN %d\n", line_number, total_token_count);
+        printf("|%s\n-------------------------------------------", err_message);
         return -1;
 
 }
