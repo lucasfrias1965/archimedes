@@ -403,7 +403,40 @@ int main(int argc, char * argv[]){
      */
     fwrite(".global start\n", sizeof(unsigned char) * 14, 1, fptr_write);
     fwrite("start:\n", sizeof(unsigned char) * 7, 1, fptr_write);
-    /*the first part is to init this memory. memory  */
+
+    /* this is where we transfer the lexer code to valid ASM. the way we'll
+     * interpert this lexercode is doing a literal assignment. so
+     * we'll literally just assign the exact asm.
+     */
+    for (i = 0; i<total_token_count && tiny_lexer[i] != 0;){
+        for (;i<total_token_count && tiny_lexer[i] != END_SM;i++){
+            func_buffer[i] = tiny_lexer[i];
+        }
+        /* argument should not be more than 5 before end char
+        / within lexer, so this ought not to go out of bounds
+        check here is for redunancy */
+
+        if (i+1 > 9){strcpy(err_message, "ERR: attempted to go past function buffer limit");goto err;}
+        /*TODO: this err keeps hitting because i can't be reset, consider a less ambigious name
+         * for the iterator between the tiny lexer and the i that's used to assign in the func buffer
+         * one should be reset within the inner loop, other should follow the full size of tiny_lexer
+         * in the outside loop
+         */
+        func_buffer[i+1] = 0;
+        i++;
+        printf("func buffer loaded");
+
+     }
+
+
+    /*the first part is to init this memory.
+     * we'll use one of the many registers given to us by the CPU in
+     * a 32-bit system minimum (hopefully this Intel CPU is more than 16 bits
+     * but i would be very suprised if it wasn't). we'll write using a bit
+     * mask allocated as a variable, and then we'll set based on order of operations
+     * (there's really no optmization going on here)
+     */
+
 
 
     return 0;
@@ -411,11 +444,25 @@ int main(int argc, char * argv[]){
 
 
     err:
-        printf("ERR: could not compile program\n");
-        printf("trace --> LINE NUMBER: %d TOKEN %d\n\n", line_number, total_token_count);
-        printf("%s\n", err_message);
-        printf("LEXER VALUES:\n ");
-        display_lexer_out(tiny_lexer);
+    /*
+     *
+     * d88888b d8888b. d8888b.  .d88b.  d8888b.
+     88'     88  `8D 88  `8D .8P  Y8. 88  `8D
+     88ooooo 88oobY' 88oobY' 88    88 88oobY'
+     88~~~~~ 88`8b   88`8b   88    88 88`8b
+     88.     88 `88. 88 `88. `8b  d8' 88 `88.
+     Y88888P 88   YD 88   YD  `Y88P'  88   YD
+     */
+        printf("\n---------------------------------------");
+        printf("\n d88888b d8888b. d8888b.  .d88b.  d8888b. \n");
+        printf("88'     88  `8D 88  `8D .8P  Y8. 88  `8D \n");
+        printf("88ooooo 88oobY' 88oobY' 88    88 88oobY'\n");
+        printf("88~~~~~ 88`8b   88`8b   88    88 88`8b   \n");
+        printf("88.     88 `88. 88 `88. `8b  d8' 88 `88.\n");
+        printf("88.     88 `88. 88 `88. `8b  d8' 88 `88.\n");
+        printf("Y88888P 88   YD 88   YD  `Y88P'  88   YD");
+        printf("\n----------------------------------------\ntrace --> LINE NUMBER: %d TOKEN %d\n\n", line_number, total_token_count);
+        printf("Error: %s\n", err_message);
         return -1;
 
 }
