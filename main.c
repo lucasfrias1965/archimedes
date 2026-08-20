@@ -17,7 +17,7 @@
 #define RETURN_RES 35
 #define END_SM 36
 #define TOKEN_TRUE 37
-#define TOKEN_FALSE
+#define TOKEN_FALSE 38
 
 
 #define LEXER_CONF_MAX_SIZE 1024
@@ -83,6 +83,12 @@ void display_lexer_out(uint8_t * tl){
               break;
           case 36:
               printf("END_SM");
+              break;
+          case 37:
+              printf("TOKEN_TRUE");
+              break;
+          case 38:
+              printf("TOKEN_FALSE");
            default:
              if (*tl_cp+96 >= 'a' && *tl_cp+96 <= 'z'){
                  printf("NAMESPACE_LETTER_%c", *tl_cp+64);
@@ -120,8 +126,8 @@ int main(int argc, char * argv[]){
     int i = 0;
     int j = 0;
     uint16_t line_number = 1;
-    char character_store = 0;
-
+    unsigned char character_store = 0;
+    char asm_line[32] = {0};
     if (argc < 2){
         printf("ERR: must specify file");
         return 1;
@@ -279,7 +285,7 @@ int main(int argc, char * argv[]){
                     tiny_lexer_i++;
                 }
                 if (strcmp("true", func_buffer) == 0){
-                    tiny_lexer[tiny_lexer_i] = OPER_XNOR;
+                    tiny_lexer[tiny_lexer_i] = TOKEN_TRUE;
                     tiny_lexer_i++;
                     /*dirty solution time! so essentially, we stop
                      * reading the buffer at the character ';', but
@@ -296,7 +302,7 @@ int main(int argc, char * argv[]){
 
                 }
                 if (strcmp("false", func_buffer) == 0){
-                    tiny_lexer[tiny_lexer_i] = OPER_XNOR;
+                    tiny_lexer[tiny_lexer_i] = TOKEN_FALSE;
                     tiny_lexer_i++;
                     if (res_as_char != ';'){printf("ERR: you must end all statements with a ';' \n");goto err;}
                     tiny_lexer[tiny_lexer_i] = END_SM; tiny_lexer_i++;
@@ -446,20 +452,13 @@ int main(int argc, char * argv[]){
         /*this is the character from 1 - 26. even though it's an unsigned char, we're
          * not looking at the ascii representation but the numerical one to format our assembly
          */
+        if (func_buffer[2] == TOKEN_TRUE || func_buffer[2] == TOKEN_FALSE){
 
-
+        }
 
         tiny_lexer_i++;
 
      }
-
-    /*the first part is to init this memory.
-     * we'll use one of the many registers given to us by the CPU in
-     * a 32-bit system minimum (hopefully this Intel CPU is more than 16 bits
-     * but i would be very suprised if it wasn't). we'll write using a bit
-     * mask allocated as a variable, and then we'll set based on order of operations
-     * (there's really no optmization going on here)
-     */
 
 
 
