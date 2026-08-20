@@ -120,6 +120,7 @@ int main(int argc, char * argv[]){
     int i = 0;
     int j = 0;
     uint16_t line_number = 1;
+    char character_store = 0;
 
     if (argc < 2){
         printf("ERR: must specify file");
@@ -403,8 +404,18 @@ int main(int argc, char * argv[]){
      * first, the heading in x86 matters a lot
      */
     fwrite(".global start\n", sizeof(unsigned char) * 14, 1, fptr_write);
+    fwrite(".intel_syntax noprefix\n", sizeof(unsigned char) * 23, 1, fptr_write);
     fwrite("start:\n", sizeof(unsigned char) * 7, 1, fptr_write);
-
+    /* to explain my ameteur understanding of the asssembly the compilier made:
+     *          push rbp -> pushes the stack pointer saver to the stack wtf?
+     *          mov rbp, rsp -> saves the stack pointer's current location
+     *          pxor xmm0, xmm0 -> clear the xmm0 register for my array.
+     */
+    fwrite("push rbp\n", sizeof(unsigned char) * 9, 1, fptr_write);
+    fwrite("mov rbp, rsp\n", sizeof(unsigned char) * 13, 1, fptr_write);
+    fwrite("pxor xmm0, xmm0\n", sizeof(unsigned char) * 16, 1, fptr_write);
+    fwrite("movaps XMMWORD PTR [rbp-32], xmm0\n", sizeof(unsigned char) * 34, 1, fptr_write);
+    fwrite("movups XMMWORD PTR [rbp-32], xmm0\n", sizeof(unsigned char) * 34, 1, fptr_write);
     /* this is where we transfer the lexer code to valid ASM. the way we'll
      * interpert this lexercode is doing a literal assignment. so
      * we'll literally just assign the exact asm.
@@ -415,12 +426,11 @@ int main(int argc, char * argv[]){
          * except that the func_buffer will have a maximum of 10, and that's over-generous. it's just being reused
          * from the previous function
          */
-        printf("%d\n", tiny_lexer_i);
-        for (i=0; tiny_lexer_i<total_token_count && tiny_lexer[tiny_lexer_i] != END_SM;i++){
-            func_buffer[i] = tiny_lexer[tiny_lexer_i];
-            tiny_lexer_i++;
+        for (i=0; (tiny_lexer_i + i ) < total_token_count && tiny_lexer[tiny_lexer_i+i] != END_SM;i++){
+            func_buffer[i] = tiny_lexer[tiny_lexer_i+i];
         }
 
+        tiny_lexer_i += i;
 
         /* argument should not be more than 5 before end char
         / within lexer, so this ought not to go out of bounds
@@ -428,11 +438,20 @@ int main(int argc, char * argv[]){
 
         if (i+1 > 9){strcpy(err_message, "ERR: attempted to go past function buffer limit");goto err;}
         func_buffer[i+1] = 0;
-        i++;
-        printf("func buffer loaded");
+
+        /*here, we're going to copy the correct assembly to make each result happen.
+         * first, we're going to deal with basic assigning
+         */
+        character_store = func_buffer[0];
+        /*this is the character from 1 - 26. even though it's an unsigned char, we're
+         * not looking at the ascii representation but the numerical one to format our assembly
+         */
+
+
+
+        tiny_lexer_i++;
 
      }
-
 
     /*the first part is to init this memory.
      * we'll use one of the many registers given to us by the CPU in

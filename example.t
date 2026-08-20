@@ -1,5 +1,4 @@
-a is xnor(a,b);
-e is and(a,b);
-c is a;
-r is a;
-c is k;
+a is true;
+b is false;
+c is xor(a,b);
+r is or(c,a);
